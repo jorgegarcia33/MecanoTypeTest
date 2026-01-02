@@ -17,23 +17,23 @@
 </head>
 <body>
     <header class="header">
-  <div class="nav-container">
-    <a href="index.html" class="logo">
-      <img src="logo.png" alt="MecanoTypeTest Logo" class="logo-img">
-      MecanoTypeTest
-    </a>
+        <div class="nav-container">
+            <a href="index.html" class="logo">
+                <img src="logo.png" alt="MecanoTypeTest Logo" class="logo-img">
+                MecanoTypeTest
+            </a>
 
-    <nav class="nav">
-      <ul class="nav-links">
-        <li>
-          <a href="https://github.com/jorgegarcia33/MecanoTypeTest" target="_blank" title="GitHub Repository" data-i18n-title="nav.github">
-            <i class="fa-brands fa-github"></i>
-          </a>
-        </li>
-      </ul>
-    </nav>
-  </div>
-</header>
+            <nav class="nav">
+                <ul class="nav-links">
+                    <li>
+                        <a href="https://github.com/jorgegarcia33/MecanoTypeTest" target="_blank" title="GitHub Repository" data-i18n-title="nav.github">
+                            <i class="fa-brands fa-github"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
 
     <div class="desk">
         <div class="typewriter">
@@ -90,6 +90,8 @@
                     </div>
 
                     <div id="stats-sheet" class="sheet-content hidden">
+                        <div id="test-summary" class="stats-summary-container"></div>
+
                         <div class="stats-filters">
                             <button class="filter-btn active" data-filter="all" data-i18n="stats.filters.all">All</button>
                             <button class="filter-btn" data-filter="lowercase" data-i18n="stats.filters.lowercase">a-z</button>
@@ -163,6 +165,10 @@
                 <div class="stat">
                     <div class="val" id="errors">0</div>
                     <div class="label" data-i18n="results.errors">ERRORS</div>
+                </div>
+                <div class="stat">
+                    <div class="val" id="personal-best-val">-</div>
+                    <div class="label">BEST (MODE)</div>
                 </div>
             </div>
             <div class="stat wide">

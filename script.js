@@ -1,3 +1,14 @@
+// --- CHANGED: Added tracking for Tests Started, Finished, and Personal Bests ---
+let userRecords = JSON.parse(localStorage.getItem('mecano_user_records')) || {
+    testsStarted: 0,
+    testsFinished: 0,
+    records: { 10: 0, 25: 0, 50: 0, 100: 0 }
+};
+
+// Helper function to save records
+function saveUserRecords() {
+    localStorage.setItem('mecano_user_records', JSON.stringify(userRecords));
+}
 let wordsListES = [];
 let wordsListEN = [];
 let wordsListDE = [];
@@ -320,6 +331,7 @@ if (zenBtn) {
 
 loadWords().then(() => {
     initGame();
+    updatePBDisplay();
 });
 
 async function loadWords() {
@@ -912,6 +924,8 @@ function handleKeydown(e) {
 
     if (!isGameActive) {
         isGameActive = true;
+        userRecords.testsStarted++;
+        saveUserRecords();
         document.body.classList.add('focus-mode');
         startTime = Date.now();
         if (soundEnabled) initAudio();
@@ -1084,7 +1098,7 @@ function handleKeydown(e) {
 function finishGame() {
     isGameFinished = true;
     document.body.classList.remove('focus-mode');
-    
+    userRecords.testsFinished++;
     localStorage.setItem('mecano_char_stats', JSON.stringify(charStats));
     
     const endTime = Date.now();
@@ -1093,6 +1107,12 @@ function finishGame() {
     const grossWPM = Math.round((totalChars / 5) / timeInMinutes);
     const netWPM = Math.round(((totalChars - errorCount) / 5) / timeInMinutes);
     
+    if (wordCount !== 'infinite' && netWPM > (userRecords.records[wordCount] || 0)) {
+        userRecords.records[wordCount] = netWPM;
+        // Optional: Trigger a "New Record" visual effect here
+    }
+    saveUserRecords();
+
     const totalProcessed = correctChars + errorCount;
     const accuracy = totalProcessed > 0 ? Math.round((correctChars / totalProcessed) * 100) : 0;
     
@@ -1171,6 +1191,8 @@ document.querySelectorAll('[data-count]').forEach(btn => {
         
         document.querySelectorAll('[data-count]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        updatePBDisplay();
+        if (currentView === 'game') initGame(false); // Restart game with new count
     });
 });
 
@@ -1276,8 +1298,15 @@ closeStatsBtn.addEventListener('click', () => {
 resetStatsBtn.addEventListener('click', () => {
     if (confirm(t("alerts.resetHistory"))) {
         charStats = {};
+        userRecords = {
+            testsStarted: 0,
+            testsFinished: 0,
+            records: { 10: 0, 25: 0, 50: 0, 100: 0 }
+        };
         localStorage.removeItem('mecano_char_stats');
+        localStorage.removeItem('mecano_user_records');
         renderGlobalStatsTable();
+        updatePBDisplay();
         weakKeysEl.textContent = "-";
     }
 });
@@ -1308,6 +1337,22 @@ document.querySelectorAll('#global-stats-table th.sortable').forEach(th => {
 });
 
 function renderGlobalStatsTable() {
+    const summaryContainer = document.getElementById('test-summary'); // Ensure this ID exists in HTML
+    if (summaryContainer) {
+        summaryContainer.innerHTML = `
+            <div class="stats-summary-grid">
+                <div>Started: <b>${userRecords.testsStarted}</b></div>
+                <div>Finished: <b>${userRecords.testsFinished}</b></div>
+                <div>Completion: <b>${userRecords.testsStarted > 0 ? Math.round((userRecords.testsFinished / userRecords.testsStarted) * 100) : 0}%</b></div>
+            </div>
+            <div class="pb-grid">
+                <span>10: <b>${userRecords.records[10]}</b></span>
+                <span>25: <b>${userRecords.records[25]}</b></span>
+                <span>50: <b>${userRecords.records[50]}</b></span>
+                <span>100: <b>${userRecords.records[100]}</b></span>
+            </div>
+        `;
+    }
     globalStatsTableBody.innerHTML = '';
     
     document.querySelectorAll('#global-stats-table th.sortable').forEach(th => {
@@ -1452,3 +1497,15 @@ document.querySelectorAll('[data-theme]').forEach(btn => {
         playSound('click');
     });
 });
+// --- NEW FUNCTION: Updates the UI to show the record for the current mode ---
+function updatePBDisplay() {
+    const pbElement = document.getElementById('personal-best-val'); // Matches the ID in the sticky note
+    if (!pbElement) return;
+
+    if (wordCount === 'infinite') {
+        pbElement.textContent = "-";
+    } else {
+        const record = userRecords.records[wordCount] || 0;
+        pbElement.textContent = record > 0 ? record : "-";
+    }
+}
