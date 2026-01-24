@@ -6,7 +6,7 @@
 import { audio, initAudio, playSound } from './audio.js';
 import { config, setStorageItem } from './config.js';
 import { data, applyTranslations } from './data.js';
-import { game, initGame, handleKeydown } from './game.js';
+import { game, initGame, handleKeydown, processCharInput, processZenCharInput } from './game.js';
 import { stats, renderUserStats, renderGlobalStatsTable, currentSort } from './stats.js';
 import { t } from './utils.js';
 
@@ -214,7 +214,17 @@ export function switchView(newView) {
     gameArea.style.transform = 'translateY(100%)';
 
     if (newView === 'game') {
-        initGame(false); 
+        initGame(false);
+        // Focus input to capture all character input (supports macOS accent menu)
+        const mobileInput = document.getElementById('mobile-input');
+        if (mobileInput) {
+            setTimeout(() => {
+                if (document.activeElement?.tagName !== 'BUTTON' && 
+                    !document.activeElement?.closest('.modal')) {
+                    mobileInput.focus();
+                }
+            }, 150);
+        }
     } else if (newView === 'settings') {
         document.getElementById('settings-sheet').classList.remove('hidden');
     } else if (newView === 'stats') {
@@ -413,6 +423,11 @@ export function initializeSettingsEventListeners() {
 
 export function toggleMobile() {
     if (mobileInput) {
+        // Track composition state to handle accent menu properly
+        let isComposing = false;
+        let compositionValue = '';
+
+        // Focus input on touch/click for mobile
         window.addEventListener('touchstart', (e) => {
             if (!e.target.closest('button') && !e.target.closest('.modal')) {
                 mobileInput.focus();
@@ -420,32 +435,102 @@ export function toggleMobile() {
         }, { passive: true });
 
         window.addEventListener('click', (e) => {
-            if (!e.target.closest('button') && !e.target.closest('.modal') && window.innerWidth <= 1024) {
+            // Focus input when clicking on game area (supports all screen sizes for accent menu)
+            if (ui.currentView === 'game' && 
+                !e.target.closest('button') && 
+                !e.target.closest('.modal') &&
+                !e.target.closest('select')) {
                 mobileInput.focus();
             }
         });
 
+        // Handle composition start (when accent menu appears in macOS)
+        mobileInput.addEventListener('compositionstart', (e) => {
+            isComposing = true;
+            compositionValue = '';
+        });
+
+        // Handle composition update (while selecting accent)
+        mobileInput.addEventListener('compositionupdate', (e) => {
+            compositionValue = e.data || '';
+        });
+
+        // Handle composition end (when accent is selected)
+        mobileInput.addEventListener('compositionend', (e) => {
+            isComposing = false;
+            compositionValue = '';
+            // Don't process here - wait for the input event that follows compositionend
+            // The input event will have the final composed character
+        });
+
+        // Handle input events - this supports macOS accent menu
         mobileInput.addEventListener('input', (e) => {
+            if (ui.currentView !== 'game') {
+                mobileInput.value = '';
+                return;
+            }
+
+            // Ignore input events during composition (wait for compositionend)
+            // After compositionend, the input event will fire with the final character
+            if (isComposing) {
+                return;
+            }
             
             if (e.inputType === 'deleteContentBackward') {
-                handleKeydown({ key: 'Backspace', preventDefault: () => {} });
+                handleKeydown({ key: 'Backspace', preventDefault: () => {}, ctrlKey: false, metaKey: false, altKey: false });
+                mobileInput.value = '';
             } else if (e.inputType === 'insertLineBreak' || (e.data && e.data.includes('\n'))) {
-                handleKeydown({ key: 'Enter', preventDefault: () => {} });
-            } else if (e.data) {
-                const char = e.data;
-                if (char === ' ') {
-                    handleKeydown({ key: ' ', preventDefault: () => {} });
+                if (config.zenModeEnabled) {
+                    processZenCharInput('\n');
                 } else {
+                    handleKeydown({ key: 'Enter', preventDefault: () => {}, ctrlKey: false, metaKey: false, altKey: false });
+                }
+                mobileInput.value = '';
+            } else if (e.data) {
+                // Process the character(s) - this includes composed characters after compositionend
+                const char = e.data;
+                if (config.zenModeEnabled) {
+                    // Process each character for zen mode
                     for (const c of char) {
-                        handleKeydown({ key: c, preventDefault: () => {} });
+                        if (c === '\n' || c === '\r') {
+                            processZenCharInput('\n');
+                        } else {
+                            processZenCharInput(c);
+                        }
+                    }
+                } else {
+                    // Process each character for normal mode
+                    for (const c of char) {
+                        processCharInput(c);
                     }
                 }
+                mobileInput.value = '';
+            } else {
+                // Fallback: process the input value if e.data is not available
+                const value = mobileInput.value;
+                if (value && value.length > 0) {
+                    const lastChar = value[value.length - 1];
+                    if (config.zenModeEnabled) {
+                        processZenCharInput(lastChar);
+                    } else {
+                        processCharInput(lastChar);
+                    }
+                }
+                mobileInput.value = '';
             }
-            mobileInput.value = '';
         });
         
+        // Handle keydown events for special keys
         mobileInput.addEventListener('keydown', (e) => {
-            e.stopPropagation();
+            // Only stop propagation for special keys that need immediate handling
+            if (['Tab', 'Escape'].includes(e.key)) {
+                e.stopPropagation();
+                handleKeydown(e);
+            } else if (e.key === 'Backspace') {
+                // Let input event handle backspace to support accent menu properly
+                // But also handle it via keydown for immediate feedback
+                handleKeydown(e);
+            }
         });
     }
 }

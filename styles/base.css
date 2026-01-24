@@ -201,6 +201,13 @@ body {
     transform: translate(-50%, -50%);
     z-index: -1;
     pointer-events: none;
+    width: 1px;
+    height: 1px;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: transparent;
+    caret-color: transparent;
 }
 
 /* ===================================

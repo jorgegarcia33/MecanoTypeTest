@@ -122,7 +122,23 @@ export function initGame(tearPaper = true, keepView = false) {
         renderWords();
     }
     
+    // Add keydown listener for special keys (Tab, etc.)
     window.addEventListener('keydown', handleKeydown);
+    
+    // Focus the hidden input to capture all character input (supports macOS accent menu)
+    const mobileInput = document.getElementById('mobile-input');
+    if (mobileInput && !keepView) {
+        // Small delay to ensure DOM is ready
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (document.activeElement?.tagName !== 'BUTTON' && 
+                    !document.activeElement?.closest('.modal') &&
+                    !document.activeElement?.closest('select')) {
+                    mobileInput.focus();
+                }
+            });
+        });
+    }
     
     if (!config.zenModeEnabled) updateCursor();
 
@@ -310,6 +326,7 @@ export function handleZenInput(e) {
     if (!cursor) return;
 
     if (e.key === 'Backspace') {
+        // Don't prevent default to allow normal backspace behavior
         const prev = cursor.previousSibling;
         if (prev) {
             if (prev.nodeType === Node.TEXT_NODE) {
@@ -334,15 +351,46 @@ export function handleZenInput(e) {
         return;
     }
 
-    if (e.key.length === 1) {
-        e.preventDefault();
+    // For regular characters, let input handler process them to support accent menu
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Don't prevent default - let the input handler process it
+        return;
+    }
+}
+
+/**
+ * Process a character input for zen mode (from input event, supports accent menu)
+ * @param {string} char - The character to process
+ */
+export function processZenCharInput(char) {
+    if (ui.currentView !== 'game') return;
+    if (!config.zenModeEnabled) return;
+
+    if (!game.isGameActive) {
+        game.isGameActive = true;
+        if (audio.soundEnabled) initAudio();
+        if (config.gameMode === 'time') startTimer();
+    }
+
+    const cursor = wordsContainer.querySelector('.zen-cursor');
+    if (!cursor) return;
+
+    if (char === '\n' || char === '\r') {
+        playSound('click');
+        const br = document.createElement('br');
+        wordsContainer.insertBefore(br, cursor);
+        updateZenCursor();
+        return;
+    }
+
+    if (char.length === 1) {
         playSound('click');
         
         const prev = cursor.previousSibling;
         if (prev && prev.nodeType === Node.TEXT_NODE) {
-            prev.textContent += e.key;
+            prev.textContent += char;
         } else {
-            const text = document.createTextNode(e.key);
+            const text = document.createTextNode(char);
             wordsContainer.insertBefore(text, cursor);
         }
         updateZenCursor();
@@ -365,7 +413,8 @@ export function handleKeydown(e) {
         return;
     }
 
-    if (['Shift', 'Control', 'Alt', 'CapsLock'].includes(e.key)) return;
+    // Handle special keys that don't need input processing
+    if (['Shift', 'Control', 'Alt', 'CapsLock', 'Meta'].includes(e.key)) return;
     
     if (e.key === 'Tab') {
         e.preventDefault();
@@ -373,10 +422,50 @@ export function handleKeydown(e) {
         return;
     }
 
-    if (!game.isGameActive) {
-        const isStartKey = e.key.length === 1 || e.key === ' ';
-        if (!isStartKey) return;
+    // For Backspace, handle immediately without preventing default
+    if (e.key === 'Backspace') {
+        // Don't prevent default to allow normal backspace behavior
+        const currentWord = game.currentWords[game.currentWordIndex];
+        const wordDivs = wordsContainer.querySelectorAll('.word');
+        const currentWordDiv = wordDivs[game.currentWordIndex];
+        
+        if (game.currentLetterIndex > 0) {
+            game.currentLetterIndex--;
+            const letter = currentWordDiv.children[game.currentLetterIndex];
+            if (game.currentLetterIndex >= currentWord.length) {
+                letter.remove();
+            } else {
+                letter.classList.remove('correct', 'incorrect');
+            }
+        } else if (game.currentWordIndex > 0 && game.currentLetterIndex === 0) {
+            game.currentWordIndex--;
+            const prevWordDiv = wordDivs[game.currentWordIndex];
+            game.currentLetterIndex = prevWordDiv.children.length;
+        }
+        updateCursor();
+        return;
+    }
 
+    // For space and regular characters, use input handler to support accent menu
+    // This allows macOS accent menu to work properly
+    if (e.key === ' ' || (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey)) {
+        // Don't prevent default - let the input handler process it
+        // This allows macOS accent menu to appear
+        return;
+    }
+}
+
+/**
+ * Process a character input (from input event, supports accent menu)
+ * @param {string} char - The character to process
+ */
+export function processCharInput(char) {
+    if (ui.currentView !== 'game') return;
+    if (config.zenModeEnabled) return; // Zen mode handled separately
+
+    if (game.isGameFinished) return;
+
+    if (!game.isGameActive) {
         game.isGameActive = true;
         document.body.classList.add('focus-mode');
         game.startTime = Date.now();
@@ -395,30 +484,15 @@ export function handleKeydown(e) {
     }
 
     const currentWord = game.currentWords[game.currentWordIndex];
+    if (!currentWord) return; // Safety check
+    
     const wordDivs = wordsContainer.querySelectorAll('.word');
     const currentWordDiv = wordDivs[game.currentWordIndex];
+    if (!currentWordDiv) return; // Safety check
+    
     const currentLetterSpan = currentWordDiv.children[game.currentLetterIndex];
 
-    if (e.key === 'Backspace') {
-        if (game.currentLetterIndex > 0) {
-            game.currentLetterIndex--;
-            const letter = currentWordDiv.children[game.currentLetterIndex];
-            if (game.currentLetterIndex >= currentWord.length) {
-                letter.remove();
-            } else {
-                letter.classList.remove('correct', 'incorrect');
-            }
-        } else if (game.currentWordIndex > 0 && game.currentLetterIndex === 0) {
-            game.currentWordIndex--;
-            const prevWordDiv = wordDivs[game.currentWordIndex];
-            game.currentLetterIndex = prevWordDiv.children.length;
-        }
-        updateCursor();
-        return;
-    }
-
-    if (e.key === ' ') {
-        e.preventDefault();
+    if (char === ' ') {
         if (game.currentWordIndex < game.currentWords.length - 1) {
             game.totalChars++;
 
@@ -429,17 +503,17 @@ export function handleKeydown(e) {
                 game.errorCount++;
                 skippedErrors++;
 
-                const char = currentWord[i];
-                if (!stats.charStats[char]) {
-                    stats.charStats[char] = { total: 0, errors: 0 };
+                const expectedChar = currentWord[i];
+                if (!stats.charStats[expectedChar]) {
+                    stats.charStats[expectedChar] = { total: 0, errors: 0 };
                 }
-                stats.charStats[char].total++;
-                stats.charStats[char].errors++;
+                stats.charStats[expectedChar].total++;
+                stats.charStats[expectedChar].errors++;
 
-                if (!currentGameCharStats[char]) {
-                    currentGameCharStats[char] = 0;
+                if (!currentGameCharStats[expectedChar]) {
+                    currentGameCharStats[expectedChar] = 0;
                 }
-                currentGameCharStats[char]++;
+                currentGameCharStats[expectedChar]++;
             }
             
             if (skippedErrors > 0) {
@@ -524,7 +598,7 @@ export function handleKeydown(e) {
         return;
     }
 
-    if (e.key.length === 1) {
+    if (char.length === 1) {
         if (game.currentLetterIndex < currentWord.length) {
             const expectedChar = currentWord[game.currentLetterIndex];
             
@@ -533,12 +607,16 @@ export function handleKeydown(e) {
             }
             stats.charStats[expectedChar].total++;
 
-            if (e.key === expectedChar) {
-                currentLetterSpan.classList.add('correct');
+            if (char === expectedChar) {
+                if (currentLetterSpan) {
+                    currentLetterSpan.classList.add('correct');
+                }
                 game.correctChars++;
                 playSound('click');
             } else {
-                currentLetterSpan.classList.add('incorrect');
+                if (currentLetterSpan) {
+                    currentLetterSpan.classList.add('incorrect');
+                }
                 game.errorCount++;
                 playSound('error');
                 
@@ -557,7 +635,7 @@ export function handleKeydown(e) {
         } else {
             const extraSpan = document.createElement('span');
             extraSpan.className = 'letter incorrect extra';
-            extraSpan.textContent = e.key;
+            extraSpan.textContent = char;
             currentWordDiv.appendChild(extraSpan);
             
             game.errorCount++;
