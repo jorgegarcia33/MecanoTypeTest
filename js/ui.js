@@ -6,8 +6,8 @@
 import { audio, initAudio, playSound } from './audio.js';
 import { config, setStorageItem } from './config.js';
 import { data, applyTranslations } from './data.js';
-import { game, initGame, handleKeydown } from './game.js';
-import { stats, renderUserStats, renderGlobalStatsTable, currentSort } from './stats.js';
+import { game, initGame, handleKeydown, checkCapsLockState } from './game.js';
+import { stats, renderUserStats, renderGlobalStatsTable, currentSort, resetUserStats } from './stats.js';
 import { t } from './utils.js';
 
 // ===================================
@@ -460,11 +460,16 @@ export function toggleMobile() {
 
         // Special keys handled via keydown on the hidden input
         mobileInput.addEventListener('keydown', (e) => {
+            checkCapsLockState(e); // Ensure CapsLock is checked before stopping propagation
             e.stopPropagation();
             if (e.key === 'Tab' || e.key === 'Backspace' || e.key === 'Enter' || e.key === 'Escape') {
                 e.preventDefault();
                 handleKeydown(e);
             }
+        });
+
+        mobileInput.addEventListener('keyup', (e) => {
+            checkCapsLockState(e); // Ensure CapsLock is checked on keyup too
         });
 
         // Keep hidden input focused during game
@@ -659,6 +664,7 @@ export function initButtons() {
             t("alerts.resetHistory"),
             () => {
                 // On confirm
+                resetUserStats();
                 stats.charStats = {};
                 localStorage.removeItem('mecano_char_stats');
                 renderGlobalStatsTable();

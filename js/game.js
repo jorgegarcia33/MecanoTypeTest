@@ -12,6 +12,7 @@ import {
   saveUserStats,
   saveCharStats,
   checkAndSaveRecord,
+  resetUserStats,
 } from "./stats.js";
 import {
   ui,
@@ -745,3 +746,32 @@ export function restartGame() {
     }
   });
 }
+
+// CapsLock Detection
+export function checkCapsLockState(e) {
+  const capsWarning = document.getElementById("caps-warning");
+  if (!capsWarning) return;
+
+  // We only care if we are in game view
+  if (ui.currentView !== "game") {
+    capsWarning.classList.add("hidden");
+    return;
+  }
+
+  if (!e.getModifierState) return;
+
+  // Ignore keyup of CapsLock to avoid double-processing
+  if (e.key === "CapsLock" && e.type === "keyup") return;
+
+  let isCapsOn = e.getModifierState("CapsLock");
+
+  // On keydown of CapsLock, getModifierState returns the OLD state (pre-toggle).
+  // Invert it to reflect the actual new state.
+  if (e.key === "CapsLock") isCapsOn = !isCapsOn;
+
+  capsWarning.classList.toggle("hidden", !isCapsOn);
+}
+
+window.addEventListener("keydown", checkCapsLockState, true);
+window.addEventListener("keyup", checkCapsLockState, true);
+window.addEventListener("mousedown", checkCapsLockState, true);

@@ -73,6 +73,7 @@ export const i18n = {
     "stats.headers.errors": "Errors",
     "stats.headers.errorRate": "% Error",
     "stats.noData": "No data yet",
+    "alerts.capsLock": "Caps Lock is ON",
     "alerts.resetHistory":
       "Are you sure you want to reset all your learning history?",
     "alerts.loadWords":
@@ -142,6 +143,7 @@ export const i18n = {
     "stats.headers.errors": "Errores",
     "stats.headers.errorRate": "% Error",
     "stats.noData": "Sin datos",
+    "alerts.capsLock": "Bloq Mayús activado",
     "alerts.resetHistory":
       "¿Estás seguro de que quieres borrar todo tu historial de aprendizaje?",
     "alerts.loadWords":
@@ -209,6 +211,7 @@ export const i18n = {
     "stats.headers.errors": "Fehler",
     "stats.headers.errorRate": "% Fehler",
     "stats.noData": "Noch keine Daten",
+    "alerts.capsLock": "Feststelltaste ist AN",
     "alerts.resetHistory":
       "Möchtest du wirklich deinen gesamten Lernverlauf zurücksetzen?",
     "alerts.loadWords":
@@ -276,6 +279,7 @@ export const i18n = {
     "stats.headers.errors": "Erreurs",
     "stats.headers.errorRate": "% Erreur",
     "stats.noData": "Aucune donnée",
+    "alerts.capsLock": "Verr. Maj activé",
     "alerts.resetHistory":
       "Voulez-vous vraiment réinitialiser tout votre historique d'apprentissage ?",
     "alerts.loadWords":
@@ -345,6 +349,7 @@ export const i18n = {
     "stats.headers.errors": "Erros",
     "stats.headers.errorRate": "% Erro",
     "stats.noData": "Sem dados",
+    "alerts.capsLock": "Caps Lock ativado",
     "alerts.resetHistory":
       "Você tem certeza que quer resetar todo seu histórico de aprendizado?",
     "alerts.loadWords":

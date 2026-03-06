@@ -262,3 +262,22 @@ export function checkAndSaveRecord(wordCount, wpm, accuracy) {
     
     return false;
 }
+/**
+ * Reset user statistics in localStorage and memory
+ */
+export function resetUserStats() {
+    try {
+        localStorage.removeItem('mecano_user_stats');
+        
+        // Clear in-memory stats
+        userStats.started = 0;
+        userStats.completed = 0;
+        userStats.time = 0;
+        userStats.records = {};
+
+        // Re-render UI
+        renderUserStats();
+    } catch (error) {
+        console.warn('Failed to delete user stats:', error);
+    }
+}
