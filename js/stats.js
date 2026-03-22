@@ -30,6 +30,11 @@ export const CHAR_FILTERS = {
  */
 export const stats = {
     charStats: loadCharStats(),
+  userStats = {
+    gamesStarted: 0,
+    gamesCompleted: 0,
+  };
+  localStorage.setItem('mecano_user_stats', JSON.stringify(userStats));
     currentFilter: 'lowercase',
 };
 
